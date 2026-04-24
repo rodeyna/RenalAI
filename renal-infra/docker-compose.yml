@@ -48,9 +48,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.dl.rule=PathPrefix('/dl')"
       - "traefik.http.services.dl.loadbalancer.server.port=8001"
-
     volumes:
       - ../renal-dl-service:/app
+      - shared-scans:/shared/scans # <--- ADD THIS: Shared storage for the API
 
   dl-worker:
     image: renal-dl-service
@@ -60,9 +60,10 @@ services:
       - rabbitmq
     environment:
       - RABBITMQ_HOST=rabbitmq
-
     volumes:
       - ../renal-dl-service:/app
+      - shared-scans:/shared/scans # <--- ADD THIS: Shared storage for the Worker
 
 volumes:
   rabbitmq_data:
+  shared-scans: # <--- ADD THIS: Declare the global shared volume
