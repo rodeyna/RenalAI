@@ -1,13 +1,12 @@
 version: '3.8'
 
 services:
-
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"    # AMQP port — your worker connects here
-      - "15672:15672"  # Management UI — open in browser to see queues
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
@@ -18,7 +17,7 @@ services:
     image: consul:1.15
     container_name: consul
     ports:
-      - "8500:8500"    # Consul UI — open in browser
+      - "8500:8500"
       - "8600:8600/udp"
     command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
 
@@ -26,8 +25,8 @@ services:
     image: traefik:v2.10
     container_name: traefik
     ports:
-      - "80:80"        # All HTTP traffic enters here
-      - "8080:8080"    # Traefik dashboard
+      - "80:80"
+      - "8080:8080"
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -35,6 +34,35 @@ services:
       - "--entrypoints.web.address=:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  dl-api:
+    image: renal-dl-service
+    container_name: dl-api
+    ports:
+      - "8001:8001"
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dl.rule=PathPrefix('/dl')"
+      - "traefik.http.services.dl.loadbalancer.server.port=8001"
+
+    volumes:
+      - ../renal-dl-service:/app
+
+  dl-worker:
+    image: renal-dl-service
+    container_name: dl-worker
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+
+    volumes:
+      - ../renal-dl-service:/app
 
 volumes:
   rabbitmq_data:
